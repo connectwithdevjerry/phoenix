@@ -15,7 +15,7 @@ import axios from "axios";
 const StatCard = ({ icon: Icon, title, value, color }) => (
   <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-200 transform hover:scale-[1.02] transition duration-300">
     <div
-      className={`w-10 h-10 rounded-full flex items-center justify-center mb-3 ${color}`}
+      className={`w-8 h-8 rounded-full flex items-center justify-center mb-3 ${color}`}
     >
       <Icon className="w-5 h-5 text-white" />
     </div>
@@ -45,23 +45,45 @@ export default function LandAlertDashboard() {
     fetchCoordinatesWithUsers();
   }, []);
 
+  const getUsersCount = () => {
+    const userIds = new Set(coordinatesWithUsers.map((item) => item.userId));
+    return userIds.size;
+  };
+
+  const numberOfLocationsAnalysed = coordinatesWithUsers.length;
+
+  const averageNewUsersPerDay = (getUsersCount() / 30).toFixed(1);
+
+  const noOfUsersCreatedThisWeek = coordinatesWithUsers.filter((item) => {
+    const createdAt = new Date(item.created_at);
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    return createdAt >= oneWeekAgo;
+  }).length;
+
   const stats = [
     {
       icon: Users,
       title: "Registered Users",
-      value: "4,000",
+      value: getUsersCount().toString(),
       color: "bg-blue-500",
     },
     {
       icon: Zap,
-      title: "New Alerts (7D)",
-      value: "1,200",
+      title: "Locations Analysed",
+      value: numberOfLocationsAnalysed.toString(),
+      color: "bg-red-500",
+    },
+    {
+      icon: Zap,
+      title: "Avg. New Users/Day",
+      value: averageNewUsersPerDay.toString(),
       color: "bg-red-500",
     },
     {
       icon: Clock,
-      title: "Avg. Response Time",
-      value: "3h 45m",
+      title: "New Users This Week",
+      value: noOfUsersCreatedThisWeek.toString(),
       color: "bg-green-500",
     },
   ];
@@ -72,13 +94,14 @@ export default function LandAlertDashboard() {
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
         <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-              LA
-            </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-              Land Alert Dashboard
-            </h1>
+          <div className="flex items-center space-x-1 flex flex-row">
+            <div
+              className="w-12 h-12 rounded-full bg-cover bg-center"
+              style={{ backgroundImage: "url('/landalertlogo.jpeg')" }}
+            ></div>
+            <p className="text-xl sm:text-xl my-0 py-0 font-bold text-gray-900">
+              Dashboard
+            </p>
           </div>
           <div className="flex items-center space-x-4">
             <button className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition shadow-sm">
@@ -99,7 +122,7 @@ export default function LandAlertDashboard() {
         {/* Top-level Flex: Stats vs Map/Table. Full height of parent. */}
         <div className="flex flex-col gap-6 lg:flex-row h-full">
           {/* Stats Cards (Left Panel): Slimmed to 22% on large screens */}
-          <div className="flex flex-col gap-4 w-full lg:w-[22%] flex-shrink-0">
+          <div className="gap-4 w-full lg:w-[22%] flex-shrink-0 flex flex-col mx-auto">
             {stats.map((stat, i) => (
               <StatCard key={i} {...stat} />
             ))}
@@ -176,10 +199,14 @@ export default function LandAlertDashboard() {
 
             {/* Data Table: Fixed height and ONLY this area scrolls (vertically) */}
             <div className="bg-white rounded-2xl shadow-md border border-gray-200 h-64 sm:h-72 lg:h-80 flex-shrink-0 overflow-y-auto">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              {/* Horizontal scroll */}
+              <div className="overflow-x-auto w-full h-full">
+                <table className="min-w-max text-sm">
                   <thead className="sticky top-0 bg-gray-50 border-b border-gray-200 z-10 shadow-sm">
                     <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        S/N
+                      </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                         Longitude
                       </th>
@@ -190,6 +217,21 @@ export default function LandAlertDashboard() {
                         Land Use
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Drought
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        VHI
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Flood Risk Level
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        LST Category
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        LST Temp
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                         Username
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
@@ -197,6 +239,7 @@ export default function LandAlertDashboard() {
                       </th>
                     </tr>
                   </thead>
+
                   <tbody className="bg-white divide-y divide-gray-100">
                     {coordinatesWithUsers.map((item, i) => (
                       <tr
@@ -204,29 +247,78 @@ export default function LandAlertDashboard() {
                         className="hover:bg-blue-50/50 transition duration-150"
                       >
                         <td className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">
+                          {i + 1}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">
                           {item.longitude}
                         </td>
+
                         <td className="px-4 py-3 whitespace-nowrap text-gray-600">
                           {item.latitude}
                         </td>
+
                         <td className="px-4 py-3 whitespace-nowrap">
                           <span
                             className={`px-3 py-1 rounded-full text-xs font-medium ${
-                              item.landUse === "Residential"
+                              item.land_use.toLowerCase() === "residential"
                                 ? "bg-blue-100 text-blue-800"
-                                : item.landUse === "Commercial"
+                                : item.land_use.toLowerCase() === "commercial"
                                 ? "bg-purple-100 text-purple-800"
                                 : "bg-green-100 text-green-800"
                             }`}
                           >
-                            {item.landUse}
+                            {item.land_use.toLowerCase()}
                           </span>
                         </td>
+
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              item.drought.toLowerCase() === "no drought"
+                                ? "bg-blue-100 text-blue-800"
+                                : item.drought.toLowerCase() === "mild drought"
+                                ? "bg-purple-100 text-purple-800"
+                                : "bg-green-100 text-green-800"
+                            }`}
+                          >
+                            {item.drought.toLowerCase()}
+                          </span>
+                        </td>
+
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              item.vhi >= 0.5
+                                ? "bg-green-100 text-green-800"
+                                : item.vhi >= 0.3
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {item.vhi.toFixed(2)}
+                          </span>
+                        </td>
+
+                        <td className="px-4 py-3 whitespace-nowrap text-gray-600">
+                          {item.flood_risk_level}
+                        </td>
+
+                        <td className="px-4 py-3 whitespace-nowrap text-gray-600">
+                          {item.lst_category}
+                        </td>
+
+                        <td className="px-4 py-3 whitespace-nowrap text-gray-600">
+                          {item.lst_temp}
+                        </td>
+
                         <td className="px-4 py-3 whitespace-nowrap text-gray-600 font-mono">
                           {item.username}
                         </td>
+
                         <td className="px-4 py-3 whitespace-nowrap text-gray-600 font-mono">
-                          {item.first_name || ""} {item.last_name || ""}
+                          {item.first_name || item.last_name
+                            ? `${item.first_name || ""} ${item.last_name || ""}`
+                            : "Not Provided"}
                         </td>
                       </tr>
                     ))}
