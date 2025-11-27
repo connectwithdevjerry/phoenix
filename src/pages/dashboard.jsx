@@ -1,19 +1,24 @@
-import React, { useState } from "react";
-import {
-  MapPin,
-  Calendar,
-  Menu,
-  ZoomIn,
-  ZoomOut,
-  Users,
-  Zap,
-  Clock,
-} from "lucide-react";
+import React, { useState, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { useEffect } from "react";
+import L from "leaflet";
 import axios from "axios";
+import { Users, Zap, Clock, Calendar, Menu } from "lucide-react";
 
+// Fix Leaflet default marker icons
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
+
+delete L.Icon.Default.prototype._getIconUrl;
+
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+});
+
+// Stat card component
 const StatCard = ({ icon: Icon, title, value, color }) => (
   <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-200 transform hover:scale-[1.02] transition duration-300">
     <div
@@ -27,9 +32,11 @@ const StatCard = ({ icon: Icon, title, value, color }) => (
 );
 
 export default function LandAlertDashboard() {
-  const [dateRange, setDateRange] = useState("Last Month");
   const [coordinatesWithUsers, setCoordinatesWithUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [view, setView] = useState("map");
+  const [zoom, setZoom] = useState(6);
+  const [dateRange] = useState("Last Month");
 
   const baseUrl = "https://phoenix-kuqn.onrender.com";
 
@@ -39,7 +46,6 @@ export default function LandAlertDashboard() {
         setLoading(true);
         const response = await axios.get(`${baseUrl}/coordinates-with-users/`);
         setCoordinatesWithUsers(response.data.data);
-
         console.log("Fetched coordinates with users:", response.data.data);
       } catch (error) {
         console.error("Error fetching coordinates with users:", error);
@@ -51,25 +57,16 @@ export default function LandAlertDashboard() {
     fetchCoordinatesWithUsers();
   }, []);
 
-  const getUsersCount = () => {
-    const userIds = new Set(coordinatesWithUsers.map((item) => item.userId));
-    return userIds.size;
-  };
-
+  const getUsersCount = () =>
+    new Set(coordinatesWithUsers.map((item) => item.userId)).size;
   const numberOfLocationsAnalysed = coordinatesWithUsers.length;
-
   const averageNewUsersPerDay = (getUsersCount() / 30).toFixed(1);
-
   const noOfUsersCreatedThisWeek = coordinatesWithUsers.filter((item) => {
     const createdAt = new Date(item.created_at);
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     return createdAt >= oneWeekAgo;
   }).length;
-
-  const [zoom, setZoom] = useState(6);
-
-  const [view, setView] = useState("satellite");
 
   const stats = [
     {
@@ -100,7 +97,7 @@ export default function LandAlertDashboard() {
 
   if (loading) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center py-20">
+      <div className="w-full h-screen flex flex-col items-center justify-center">
         <div className="animate-spin h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full"></div>
         <p className="text-gray-600 text-sm mt-3">Loading coordinates...</p>
       </div>
@@ -108,17 +105,16 @@ export default function LandAlertDashboard() {
   }
 
   return (
-    // Root container now ensures full height and prevents external scroll
     <div className="h-screen flex flex-col bg-gray-50 font-sans overflow-hidden">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
         <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-1 flex flex-row">
+          <div className="flex items-center space-x-2">
             <div
               className="w-12 h-12 rounded-full bg-cover bg-center"
               style={{ backgroundImage: "url('/landalertlogo.jpeg')" }}
-            ></div>
-            <p className="text-xl sm:text-xl my-0 py-0 font-bold text-gray-900">
+            />
+            <p className="text-xl sm:text-xl font-bold text-gray-900">
               Dashboard
             </p>
           </div>
@@ -136,20 +132,19 @@ export default function LandAlertDashboard() {
         </div>
       </header>
 
-      {/* Main Content Area: fills remaining height, ensures no external scroll */}
+      {/* Main Content */}
       <div className="p-4 sm:p-6 lg:p-8 w-full flex-grow overflow-hidden">
-        {/* Top-level Flex: Stats vs Map/Table. Full height of parent. */}
-        <div className="flex flex-col gap-6 lg:flex-row h-full">
-          {/* Stats Cards (Left Panel): Slimmed to 22% on large screens */}
-          <div className="gap-4 w-full lg:w-[22%] flex-shrink-0 flex flex-col mx-auto">
+        <div className="flex flex-col lg:flex-row gap-6 h-full">
+          {/* Stats Cards */}
+          <div className="flex flex-col gap-4 w-full lg:w-[22%]">
             {stats.map((stat, i) => (
               <StatCard key={i} {...stat} />
             ))}
           </div>
 
-          {/* Map + Table (Right Panel): Takes the remaining 78%, is a vertical flex container */}
+          {/* Map + Table */}
           <div className="flex flex-col gap-6 w-full lg:w-[78%] h-full">
-            {/* Map Container: Uses flex-grow to take up all available space above the table */}
+            {/* Map */}
             <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden relative flex-grow min-h-[300px]">
               {/* Map Controls */}
               <div className="absolute top-4 right-4 z-10 flex space-x-2">
@@ -175,9 +170,8 @@ export default function LandAlertDashboard() {
                 </button>
               </div>
 
-              {/* Map Placeholder */}
               <MapContainer
-                center={[9.082, 8.6753]} // center Nigeria
+                center={[9.082, 8.6753]}
                 zoom={zoom}
                 className="h-full w-full z-0"
               >
@@ -211,7 +205,6 @@ export default function LandAlertDashboard() {
                 ))}
               </MapContainer>
 
-              {/* Environmental Status */}
               <div className="absolute bottom-6 right-6 z-10 max-w-xs">
                 <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-xl px-3 py-2 border border-gray-200">
                   <p className="text-sm italic text-gray-800">
@@ -221,49 +214,34 @@ export default function LandAlertDashboard() {
               </div>
             </div>
 
-            {/* Data Table: Fixed height and ONLY this area scrolls (vertically) */}
-            <div className="bg-white rounded-2xl shadow-md border border-gray-200 h-64 sm:h-72 lg:h-80 flex-shrink-0 overflow-y-auto">
-              {/* Horizontal scroll */}
+            {/* Data Table */}
+            <div className="bg-white rounded-2xl shadow-md border border-gray-200 h-64 sm:h-72 lg:h-80 overflow-y-auto">
               <div className="overflow-x-auto w-full h-full">
                 <table className="min-w-max text-sm">
                   <thead className="sticky top-0 bg-gray-50 border-b border-gray-200 z-10 shadow-sm">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        S/N
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Longitude
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Latitude
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Land Use
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Drought
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        VHI
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Flood Risk Level
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        LST Category
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        LST Temp
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Username
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Requested By
-                      </th>
+                      {[
+                        "S/N",
+                        "Longitude",
+                        "Latitude",
+                        "Land Use",
+                        "Drought",
+                        "VHI",
+                        "Flood Risk Level",
+                        "LST Category",
+                        "LST Temp",
+                        "Username",
+                        "Requested By",
+                      ].map((head, i) => (
+                        <th
+                          key={i}
+                          className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                        >
+                          {head}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
-
                   <tbody className="bg-white divide-y divide-gray-100">
                     {coordinatesWithUsers.map((item, i) => (
                       <tr
@@ -276,11 +254,9 @@ export default function LandAlertDashboard() {
                         <td className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">
                           {item.longitude}
                         </td>
-
                         <td className="px-4 py-3 whitespace-nowrap text-gray-600">
                           {item.latitude}
                         </td>
-
                         <td className="px-4 py-3 whitespace-nowrap">
                           <span
                             className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -294,7 +270,6 @@ export default function LandAlertDashboard() {
                             {item.land_use.toLowerCase()}
                           </span>
                         </td>
-
                         <td className="px-4 py-3 whitespace-nowrap">
                           <span
                             className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -308,7 +283,6 @@ export default function LandAlertDashboard() {
                             {item.drought.toLowerCase()}
                           </span>
                         </td>
-
                         <td className="px-4 py-3 whitespace-nowrap">
                           <span
                             className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -322,23 +296,18 @@ export default function LandAlertDashboard() {
                             {item.vhi.toFixed(2)}
                           </span>
                         </td>
-
                         <td className="px-4 py-3 whitespace-nowrap text-gray-600">
                           {item.flood_risk_level}
                         </td>
-
                         <td className="px-4 py-3 whitespace-nowrap text-gray-600">
                           {item.lst_category}
                         </td>
-
                         <td className="px-4 py-3 whitespace-nowrap text-gray-600">
                           {item.lst_temp}
                         </td>
-
                         <td className="px-4 py-3 whitespace-nowrap text-gray-600 font-mono">
-                          {item.username}
+                          {item.username || "Anonymous"}
                         </td>
-
                         <td className="px-4 py-3 whitespace-nowrap text-gray-600 font-mono">
                           {item.first_name || item.last_name
                             ? `${item.first_name || ""} ${item.last_name || ""}`
