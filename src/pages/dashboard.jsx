@@ -311,7 +311,7 @@ export default function LandAlertDashboard() {
                         <td className="px-4 py-3 whitespace-nowrap text-gray-600 font-mono">
                           {item.first_name || item.last_name
                             ? `${item.first_name || ""} ${item.last_name || ""}`
-                            : "Not Provided"}
+                            : "Anonymous"}
                         </td>
                       </tr>
                     ))}
