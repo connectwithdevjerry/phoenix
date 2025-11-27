@@ -9,6 +9,8 @@ import {
   Zap,
   Clock,
 } from "lucide-react";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import { useEffect } from "react";
 import axios from "axios";
 
@@ -27,18 +29,22 @@ const StatCard = ({ icon: Icon, title, value, color }) => (
 export default function LandAlertDashboard() {
   const [dateRange, setDateRange] = useState("Last Month");
   const [coordinatesWithUsers, setCoordinatesWithUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const baseUrl = "https://phoenix-kuqn.onrender.com";
 
   useEffect(() => {
     const fetchCoordinatesWithUsers = async () => {
       try {
+        setLoading(true);
         const response = await axios.get(`${baseUrl}/coordinates-with-users/`);
         setCoordinatesWithUsers(response.data.data);
 
         console.log("Fetched coordinates with users:", response.data.data);
       } catch (error) {
         console.error("Error fetching coordinates with users:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -60,6 +66,10 @@ export default function LandAlertDashboard() {
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     return createdAt >= oneWeekAgo;
   }).length;
+
+  const [zoom, setZoom] = useState(6);
+
+  const [view, setView] = useState("satellite");
 
   const stats = [
     {
@@ -87,6 +97,15 @@ export default function LandAlertDashboard() {
       color: "bg-green-500",
     },
   ];
+
+  if (loading) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center py-20">
+        <div className="animate-spin h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+        <p className="text-gray-600 text-sm mt-3">Loading coordinates...</p>
+      </div>
+    );
+  }
 
   return (
     // Root container now ensures full height and prevents external scroll
@@ -133,66 +152,71 @@ export default function LandAlertDashboard() {
             {/* Map Container: Uses flex-grow to take up all available space above the table */}
             <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden relative flex-grow min-h-[300px]">
               {/* Map Controls */}
-              <div className="absolute top-4 left-4 z-10 flex space-x-2">
-                <button className="bg-white px-3 py-2 rounded-xl shadow-lg text-sm font-semibold border border-blue-500 text-blue-700">
+              <div className="absolute top-4 right-4 z-10 flex space-x-2">
+                <button
+                  className={
+                    view === "map"
+                      ? "bg-white px-3 py-2 rounded-xl shadow-lg text-sm font-semibold border border-blue-500 text-blue-700"
+                      : "bg-gray-100 px-3 py-2 rounded-xl text-sm font-medium hover:bg-gray-200 transition"
+                  }
+                  onClick={() => setView("map")}
+                >
                   Map
                 </button>
-                <button className="bg-gray-100 px-3 py-2 rounded-xl text-sm font-medium hover:bg-gray-200 transition">
+                <button
+                  className={
+                    view === "satellite"
+                      ? "bg-white px-3 py-2 rounded-xl shadow-lg text-sm font-semibold border border-blue-500 text-blue-700"
+                      : "bg-gray-100 px-3 py-2 rounded-xl text-sm font-medium hover:bg-gray-200 transition"
+                  }
+                  onClick={() => setView("satellite")}
+                >
                   Satellite
                 </button>
               </div>
 
-              {/* Zoom Controls */}
-              <div className="absolute top-4 right-4 z-10 flex flex-col space-y-2">
-                <button className="bg-white p-2 rounded-xl shadow-md hover:bg-gray-50">
-                  <ZoomIn className="w-5 h-5 text-gray-700" />
-                </button>
-                <button className="bg-white p-2 rounded-xl shadow-md hover:bg-gray-50">
-                  <ZoomOut className="w-5 h-5 text-gray-700" />
-                </button>
-              </div>
-
               {/* Map Placeholder */}
-              <div className="h-full bg-gradient-to-br from-cyan-100 to-green-100 relative flex items-center justify-center">
-                <div className="text-center">
-                  <MapPin className="w-12 h-12 sm:w-16 sm:h-16 text-red-500 mx-auto mb-4 animate-pulse" />
-                  <p className="text-gray-800 font-bold text-xl">
-                    Nigeria Flood Risk Map
-                  </p>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Click any red dot for details
-                  </p>
-                </div>
-              </div>
+              <MapContainer
+                center={[9.082, 8.6753]} // center Nigeria
+                zoom={zoom}
+                className="h-full w-full z-0"
+              >
+                <TileLayer
+                  url={
+                    view === "map"
+                      ? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      : "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+                  }
+                  attribution="&copy; OpenStreetMap contributors"
+                />
+                {coordinatesWithUsers.map((user, i) => (
+                  <Marker key={i} position={[user.latitude, user.longitude]}>
+                    <Popup>
+                      <div>
+                        <p className="font-bold">
+                          {user.username || "Anonymous"}
+                        </p>
+                        <p>
+                          {user.first_name || ""} {user.last_name || ""}
+                        </p>
+                        <p>Land Use: {user.land_use}</p>
+                        <p>Drought: {user.drought}</p>
+                        <p>VHI: {user.vhi.toFixed(2)}</p>
+                        <p>Flood Risk Level: {user.flood_risk_level}</p>
+                        <p>LST Category: {user.lst_category}</p>
+                        <p>LST Temp: {user.lst_temp}</p>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
 
               {/* Environmental Status */}
-              <div className="absolute bottom-6 right-6 z-10 w-full max-w-xs">
-                <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-xl p-4 border border-gray-200">
-                  <h3 className="font-bold text-base mb-3 text-gray-800">
-                    Environmental Status
-                  </h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Temperature:</span>
-                      <span className="font-semibold text-orange-600">
-                        38.9°C (Very High)
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Drought Risk:</span>
-                      <span className="font-semibold text-green-600">
-                        No Drought (VHI: 0.514)
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">
-                        Flood Susceptibility:
-                      </span>
-                      <span className="font-semibold text-yellow-600">
-                        Class 3 – Moderate
-                      </span>
-                    </div>
-                  </div>
+              <div className="absolute bottom-6 right-6 z-10 max-w-xs">
+                <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-xl px-3 py-2 border border-gray-200">
+                  <p className="text-sm italic text-gray-800">
+                    Brought to you by team Phoenix
+                  </p>
                 </div>
               </div>
             </div>
