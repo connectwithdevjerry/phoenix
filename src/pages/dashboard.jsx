@@ -9,6 +9,8 @@ import {
   Zap,
   Clock,
 } from "lucide-react";
+import { useEffect } from "react";
+import axios from "axios";
 
 const StatCard = ({ icon: Icon, title, value, color }) => (
   <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-200 transform hover:scale-[1.02] transition duration-300">
@@ -24,65 +26,24 @@ const StatCard = ({ icon: Icon, title, value, color }) => (
 
 export default function LandAlertDashboard() {
   const [dateRange, setDateRange] = useState("Last Month");
+  const [coordinatesWithUsers, setCoordinatesWithUsers] = useState([]);
 
-  const assessments = [
-    {
-      name: "Chinedu Okeke",
-      phone: "+234 801 234 5678",
-      landUse: "Residential",
-      lon: 3.3874,
-      lat: 6.5244,
-    },
-    {
-      name: "Aisha Mohammed",
-      phone: "+234 703 456 7890",
-      landUse: "Commercial",
-      lon: 8.6753,
-      lat: 9.082,
-    },
-    {
-      name: "Emeka Nwosu",
-      phone: "+234 906 123 4567",
-      landUse: "Agriculture",
-      lon: 7.3775,
-      lat: 9.0765,
-    },
-    {
-      name: "Fatima Bello",
-      phone: "+234 802 345 6789",
-      landUse: "Residential",
-      lon: 5.1436,
-      lat: 4.8149,
-    },
-    {
-      name: "Kunle Adeyemi",
-      phone: "+234 701 567 8901",
-      landUse: "Commercial",
-      lon: 7.5684,
-      lat: 4.5458,
-    },
-    {
-      name: "Gloria Uche",
-      phone: "+234 903 210 9876",
-      landUse: "Agriculture",
-      lon: 8.4239,
-      lat: 7.9404,
-    },
-    {
-      name: "Tunde Oladipo",
-      phone: "+234 810 001 1000",
-      landUse: "Residential",
-      lon: 3.9312,
-      lat: 7.3775,
-    },
-    {
-      name: "Ngozi Ibeh",
-      phone: "+234 706 600 7000",
-      landUse: "Commercial",
-      lon: 4.8149,
-      lat: 7.0379,
-    },
-  ];
+  const baseUrl = "https://phoenix-kuqn.onrender.com";
+
+  useEffect(() => {
+    const fetchCoordinatesWithUsers = async () => {
+      try {
+        const response = await axios.get(`${baseUrl}/coordinates-with-users/`);
+        setCoordinatesWithUsers(response.data.data);
+
+        console.log("Fetched coordinates with users:", response.data.data);
+      } catch (error) {
+        console.error("Error fetching coordinates with users:", error);
+      }
+    };
+
+    fetchCoordinatesWithUsers();
+  }, []);
 
   const stats = [
     {
@@ -220,33 +181,33 @@ export default function LandAlertDashboard() {
                   <thead className="sticky top-0 bg-gray-50 border-b border-gray-200 z-10 shadow-sm">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Name
+                        Longitude
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Phone
+                        Latitude
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                         Land Use
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Lon
+                        Username
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Lat
+                        Requested By
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
-                    {assessments.map((item, i) => (
+                    {coordinatesWithUsers.map((item, i) => (
                       <tr
                         key={i}
                         className="hover:bg-blue-50/50 transition duration-150"
                       >
                         <td className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">
-                          {item.name}
+                          {item.longitude}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-gray-600">
-                          {item.phone}
+                          {item.latitude}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <span
@@ -262,10 +223,10 @@ export default function LandAlertDashboard() {
                           </span>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-gray-600 font-mono">
-                          {item.lon}
+                          {item.username}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-gray-600 font-mono">
-                          {item.lat}
+                          {item.first_name || ""} {item.last_name || ""}
                         </td>
                       </tr>
                     ))}
